@@ -76,34 +76,8 @@
                 <h2>Discover</h2>
                 <p>Social distance friendly shopping in the Kitchener Waterloo area.</p>
             </header>
-            <input type="text" id="myInput" onkeyup="myFunction()" placeholder="Search for keywords"
-                   title="Type in a keyword">
+            <table id="datatable"></table>
 
-            <table id="myTable">
-                <tr class="header">
-                    <th style="width:33%;">Name</th>
-                    <th style="width:33%;">Delivery Options</th>
-                    <th style="width:33%;">URL</th>
-                </tr>
-                <tr>
-                    <td style="display:none;">Coffee Shop Curbside Pickup</td>
-                    <td>Coffee Shop</td>
-                    <td>Curbside Pickup</td>
-                    <td><a href="#">Link</a></td>
-                </tr>
-                <tr>
-                    <td style="display:none;">Events Company Local Delivery</td>
-                    <td>Events Company</td>
-                    <td>Local Delivery</td>
-                    <td><a href="#">Link</a></td>
-                </tr>
-                <tr>
-                    <td style="display:none;">Restaurant Local Delivery</td>
-                    <td>Restaurant</td>
-                    <td>Local Delivery</td>
-                    <td><a href="#">Link</a></td>
-                </tr>
-            </table>
         </article>
 
         <section class="posts">
@@ -167,25 +141,58 @@
 <script src="assets/js/util.js"></script>
 <script src="assets/js/main.js"></script>
 
+<!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>-->
+<script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">
 </body>
+
+
 <script>
-    function myFunction() {
-        var input, filter, table, tr, td, i, txtValue;
-        input = document.getElementById("myInput");
-        filter = input.value.toUpperCase();
-        table = document.getElementById("myTable");
-        tr = table.getElementsByTagName("tr");
-        for (i = 0; i < tr.length; i++) {
-            td = tr[i].getElementsByTagName("td")[0];
-            if (td) {
-                txtValue = td.textContent || td.innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
-                } else {
-                    tr[i].style.display = "none";
-                }
-            }
-        }
+let json_endpoint = 'https://spreadsheets.google.com/feeds/cells/1pNaIweKizI80Yzq5zeUFG-bHQnPMbfcS4uYlS6htpn4/1/public/full?alt=json'
+let schema_row = 4
+
+let response = $.get(json_endpoint)
+let cells = response.responseJSON.feed.entry.map(r => r.gs$cell)
+
+var schema = {}
+cells.filter(r => r.row == schema_row).forEach(r => schema[r.col] = r.inputValue)
+
+var query_data = {}
+
+let setValue = (properties, value, obj) => {
+
+  // Not yet at the last property so keep digging
+  if (properties.length > 1) {
+    // The property doesn't exists OR is not an object (and so we overwritte it) so we create it
+    if (!obj.hasOwnProperty(properties[0]) || typeof obj[properties[0]] !== "object") obj[properties[0]] = {}
+      // We iterate.
+    return setValue(properties.slice(1), value, obj[properties[0]])
+      // This is the last property - the one where to set the value
+  } else {
+    // We set the value to the last property
+    obj[properties[0]] = value
+    return true // this is the end
+  }
+
+};
+
+cells.filter(r => r.row > schema_row).forEach(c => setValue([c.row, schema[c.col]], c.inputValue, query_data));
+
+if (query_data == undefined) {
+    {
+        throw "There was a problem getting the query data."
     }
+}
+
+let columns_info = Object.keys(query_data[0]).map(key => {
+    return {data: key, title: key}
+})
+
+$(document).ready(function () {
+    $("#" + "datatable").DataTable({
+        data: query_data,
+        columns: columns_info
+    })
+})
 </script>
 </html>
