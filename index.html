@@ -148,11 +148,19 @@
 
 
 <script>
+function Get(yourUrl){
+    var Httpreq = new XMLHttpRequest(); // a new request
+    Httpreq.open("GET",yourUrl,false);
+    Httpreq.send(null);
+    return Httpreq.responseText;
+}
+
+
 let json_endpoint = 'https://spreadsheets.google.com/feeds/cells/1pNaIweKizI80Yzq5zeUFG-bHQnPMbfcS4uYlS6htpn4/1/public/full?alt=json'
 let schema_row = 4
 
-let response = $.get(json_endpoint)
-let cells = response.responseJSON.feed.entry.map(r => r.gs$cell)
+var response = JSON.parse(Get(json_endpoint));
+let cells = response['feed']['entry'].map(r => r.gs$cell)
 
 var schema = {}
 cells.filter(r => r.row == schema_row).forEach(r => schema[r.col] = r.inputValue)
@@ -184,13 +192,20 @@ if (query_data == undefined) {
     }
 }
 
-let columns_info = Object.keys(query_data[0]).map(key => {
-    return {data: key, title: key}
+let columns_info = Object.values(schema).map(value => {
+    return {title: value}
 })
+
+var query_data_array = []
+
+var i;
+for (i = schema_row+1; i < cells[cells.length-1].row; i++) {
+  query_data_array.push(Object.values(query_data[i]));
+}
 
 $(document).ready(function () {
     $("#" + "datatable").DataTable({
-        data: query_data,
+        data: query_data_array,
         columns: columns_info
     })
 })
